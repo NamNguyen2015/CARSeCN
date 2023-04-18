@@ -14,16 +14,6 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import matplotlib as mpl
 import copy
-
-
-import pandas as pd
-import json
-import os
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-import matplotlib as mpl
-import copy
 from collections import defaultdict,OrderedDict
 
 
