@@ -17,7 +17,11 @@ import CARSEC as CS
 import tempfile
 
 
+
+
 st.subheader("Single Input")
+st.markdown("**We create this page with manual introductions for all input parameters. It also allows user click and download the template as an example.**")
+
 
 DB = {}
 #**********************************
@@ -25,7 +29,9 @@ st.write("En el fichero de datos está permitido hacer comentarios utilizando el
 
 st.write("\n")
 st.write("-***Titulo de la sección.*** Es obligatorio y debe ser la primera línea.")
-st.selectbox( '"Titulo"',['CARSECN'])
+title=st.text_input('Type the title: ', 'CARSECN')
+
+DB['titulo']=title
 
 
 # 3-unid
@@ -36,7 +42,10 @@ st.markdown("tm	Toneladas y metros")
 st.write("     " "knm	Kilonewtons y metros")
 st.write("     ""kift	Kilolibras y pies")
 st.write("Los resultados se darán en las unidades definidas en este campo.")
-DB['unid'] = st.selectbox('"unid"' , options=['tm','knm','lbin'])
+
+
+unid=st.selectbox('"unid"' , options=['tm','knm','lbin'])
+DB['unid']=unid
 
 # 4-norm
 st.write("\n")
@@ -47,12 +56,17 @@ st.write("Indica la normativa a emplear en el cálculo. Las opciones son")
 st.write("ehe	EHE-08")
 st.write("aashto	AASHTO")
 
-DB['norm'] = st.selectbox('"norm"', options=['ehe','aashto'])
 
-# 2-secc
+norm= st.selectbox('"norm"', options=['ehe','aashto'])
+DB['norm']=norm
+
+# 2-secc_horm
 st.write("\n")
 st.write("-***“secc horm”*** [módulo de elasticidad] (por defecto toma 3000000 t/m2)")
-DB['secc'] = st.selectbox('"secc"', options=['horm'])
+secc_horm= st.selectbox('"secc horm"', options=['horm'])
+modulo_elasticidad=st.text_input('E', 3000000)
+
+DB['secc_horm']=secc_horm
 
 
 
@@ -62,9 +76,28 @@ st.write("\n")
 st.write("-[***“coef”*** [“horm” ghorm] [“arma” garma] [“pret” gpret]].") 
 st.write("Establece los coeficientes de minoración de los materiales. No es obligatorio poner esta línea. Si se ha definido como normativa la EHE-08 los coeficientes por defecto son 1,50 para el hormigón y 1,15 para los aceros. En el caso de la AASHTO todos los coeficientes valen por defecto la unidad.")
 
-DB['coef_horm'] = st.number_input('"horm"', 1.5)
-DB['coef_arma'] = st.number_input('"arma"', 1.15)
-DB['coef_pret'] = st.number_input('"pret"', 1.15)
+coef_horm=st.number_input('coef_horm', 1.5)
+coef_arma=st.number_input('coef_arma', 1.15)
+coef_pret=st.number_input('coef_pret', 1.15)
+
+
+
+DB['coef']={'coef_horm': coef_horm,'coef_arma': coef_arma,'coef_pret': coef_pret}
+
+
+
+st.markdown('**phi**')
+
+
+
+phi_compression=st.text_input('phi_compression', 0.75)
+
+phi_traction=st.text_input('phi_traction', 0.90)
+
+
+DB['phi']={'phi_compression': phi_compression,'phi_traction': phi_traction}
+
+
 
 #*******************
 st.write("\n")
@@ -85,22 +118,22 @@ st.write("Definición de cada uno de los puntos")
 
 # always check if the key exist in session state:
 
-if 'df_punt_contorno' not in st.session_state:
+if 'df_punt' not in st.session_state:
 	_df = {'punt': list(range(1,8)), 'X': [0,2,2,0,1,0.05,1.95],'Y':[0,0,2,2,1,0.05,0.05]}
-	st.session_state.df_punt_contorno= pd.DataFrame(_df,columns=['punt', 'X', 'Y'])
+	st.session_state.df_punt= pd.DataFrame(_df,columns=['punt', 'X', 'Y'])
 
 st.markdown('**Punto del contorno**')
 
 if st.button("Clear table"):
     # update dataframe state
-	st.session_state.df_punt_contorno= pd.DataFrame('',index=range(7), columns=['punt', 'X', 'Y'])
+	st.session_state.df_punt= pd.DataFrame('',index=range(7), columns=['punt', 'X', 'Y'])
 
 if st.button("Add rows"):
     # update dataframe state
 	additional_rows= pd.DataFrame('',index=range(5), columns=['punt', 'X', 'Y'])
-	st.session_state.df_punt_contorno=pd.concat([st.session_state.df_punt_contorno,additional_rows])
+	st.session_state.df_punt=pd.concat([st.session_state.df_punt,additional_rows])
 	
-_df=st.session_state.df_punt_contorno.copy()
+_df=st.session_state.df_punt.copy()
   
 with st.form('test') as f:
 	response = AgGrid(_df, editable=True, fit_columns_on_grid_load=True,data_return_mode=DataReturnMode.AS_INPUT,update_mode=GridUpdateMode.MODEL_CHANGED,reload_data=False,
@@ -108,18 +141,21 @@ with st.form('test') as f:
 	st.form_submit_button('Confirm')
 
 
-st.session_state.df_punt_contorno=response['data'].dropna(axis='rows', how='any')
-st.write(st.session_state.df_punt_contorno)
-DB['punt_contorno'] = response['data'].dropna(axis='rows', how='any').to_dict('records')
+st.session_state.df_punt=response['data'].dropna(axis='rows', how='any')
+st.write(st.session_state.df_punt)
+
+DB['puntos'] = response['data'].dropna(axis='rows', how='any').to_dict('records')
 
 ## Generate Graphic
 
 x=response['data']['X'].values.tolist()[0:4]
 y=response['data']['Y'].values.tolist()[0:4]
 
-CS.polygonal_graphics(x, y,path="Output_files/graph")
-st.image("Output_files/graph.png")
-
+# =============================================================================
+# CS.polygonal_graphics(x, y,path="Output_files/graph")
+# st.image("Output_files/graph.png")
+# 
+# =============================================================================
 # *************************hormigon
 st.write("\n")
 st.write("-***“horm”*** fck [“[ “ unidad tensión “ ]”]")
@@ -127,46 +163,105 @@ st.write("-***“horm”*** fck [“[ “ unidad tensión “ ]”]")
 st.write("Indica las características del hormigón para el contorno que se define. Se pueden poner varios tipo de hormigones. Dentro de esta sección se definen el contorno cerrado y los huecos poligonales y/o circulares.")
 st.write("Se puede definir las unidades en las que está dada la resistencia del hormigón (tm2, kcm2, mpa, ksi,ksf, knm2).")
 
+fck=st.text_input('"horm"', 3500)
 
-t_h = st.selectbox("Unidad de hormigon", options=["tm2", "kcm2", "mpa", "ksi","ksf", "knm2"])
+st.write("\n")
+st.write("-***“Contorno”*** puntos que definen el contorno ")
+st.markdown('**Contorno**')
 
-DB['horm'] = st.text_input('"horm"', 3500)
+collect_numbers = lambda x : [str(int(i)) for i in re.split("[^0-9]", x)  if i != "" ]
+
+_list_puntos=list()
+numbers1 = st.text_input("Enter la lista de los puntos (section_1):")
+_list_puntos.append(collect_numbers(numbers1))
+numbers2 = st.text_input("OPTIONAL: Enter la lista de los puntos (section_2):")
+_list_puntos.append(collect_numbers(numbers2))
+puntos_contorno=_list_puntos 
+st.write(puntos_contorno)
+
+
+
+DB['horm']={'E': modulo_elasticidad,'fck':fck,'puntos_contorno':puntos_contorno} # 'puntos_contorno' is hp
+
+
+
 
 # *************************
 # Contorno Poligonal (hp)
 st.write("\n")
 st.write("-***“hp”*** puntos que definen el contorno poligonal")
-
-df_hp = pd.DataFrame(
-    '',
-    index=range(1),
-    columns=['Punto_1', 'Punto_2', 'Punto_3', 'Punto_4']
-)
-df_hp['Punto_1']=[1]
-df_hp['Punto_2']=[2]
-df_hp['Punto_3']=[3]
-df_hp['Punto_4']=[4]
 st.markdown('**Contorno Poligonal**')
-response = AgGrid(df_hp, editable=True, fit_columns_on_grid_load=True)
 
-DB['contorno_Poligonal']= response['data'].to_dict('records')
+
+
+#numbers_hp = st.text_input("Enter la lista de los puntos hp:")
+list_puntos_hp=list()
+numbers_hp1 = st.text_input("Enter la lista de los puntos hp (section_1):")
+list_puntos_hp.append(collect_numbers(numbers_hp1))
+numbers_hp2 = st.text_input("OPTIONAL: Enter la lista de los puntos hp (section_2):")
+list_puntos_hp.append(collect_numbers(numbers_hp2))
+hp=list_puntos_hp 
+st.write(hp)
+
+
+DB['hp']= hp
+
+
 
 # *************************
-# hc
-st.write("\n")
-st.write("-***“hc”*** puntos que define el centro del centro   radio del círculo")
-DB['hc'] = st.selectbox('', options=['hc'])
-df_hc = pd.DataFrame(
-    '',
-    index=range(1),
-    columns=['Punto_Central', 'Radio']
-)
-df_hc['Punto_Central']=[5]
-df_hc['Radio']=0.30
-st.markdown('**hc**')
-response = AgGrid(df_hc, editable=True, fit_columns_on_grid_load=True)
-DB['hc']= response['data'].to_dict('records')
 
+
+# always check if the key exist in session state:
+
+if 'df_hc' not in st.session_state:
+	_df = { 'Punto_Central': [5],'Radio':[0.05]}
+	st.session_state.df_hc= pd.DataFrame(_df,columns=['Punto_Central', 'Radio'])
+
+st.markdown('**hc**')
+
+if st.button("Clear table", key="clear"):
+    # update dataframe state
+	st.session_state.df_hc= pd.DataFrame('',index=range(1), columns=['Punto_Central', 'Radio'])
+
+if st.button("Add rows", key='add'):
+    # update dataframe state
+	additional_rows= pd.DataFrame('',index=range(5), columns=['Punto_Central', 'Radio'])
+	st.session_state.df_hc=pd.concat([st.session_state.df_hc,additional_rows])
+	
+_df=st.session_state.df_hc.copy()
+  
+with st.form('test1') as f:
+	response = AgGrid(_df, editable=True, fit_columns_on_grid_load=True,data_return_mode=DataReturnMode.AS_INPUT,update_mode=GridUpdateMode.MODEL_CHANGED,reload_data=False,
+    wrap_text=True,resizeable=True)
+	st.form_submit_button('Confirm')
+
+
+st.session_state.df_hc=response['data'].dropna(how='any')
+
+DB['hc'] =response['data'].dropna(how='any').to_dict('records')
+
+
+
+
+
+
+# =============================================================================
+# 
+# 
+# DB['hc'] = st.selectbox('', options=['hc'])
+# df_hc = pd.DataFrame(
+#     '',
+#     index=range(1),
+#     columns=['Punto_Central', 'Radio']
+# )
+# df_hc['Punto_Central']=[5]
+# df_hc['Radio']=0.30
+# st.markdown('**hc**')
+# response = AgGrid(df_hc, editable=True, fit_columns_on_grid_load=True)
+# DB['hc']= response['data'].to_dict('records')
+# #st.write(DB['hc'])
+# 
+# =============================================================================
 # *************************
 
 
@@ -180,14 +275,34 @@ st.selectbox("unidad tensión ", options=["tm2", "kcm2", "mpa", "ksi","ksf", "kn
 st.write("Se puede definir las unidades en las que está dada el área del acero (m2, cm2, mm2, ft2, in2). Para poder dar las unidades del área debe estar definida la unidad del límite elástico")
 st.selectbox("unidad área ", options=["m2", "cm2", "mm2", "ft2", "in2"])
 
+fyk=st.text_input('"arma"', 51000)
 
-DB['arma'] = st.text_input('"arma"', 51000)
+#DB['arma'].fyk = fyk
+
 
 # *************************
 
 # Caracteristicas
 st.write("\n")
-st.write("-punto inicial    punto final      número de cables     área de cada cable")
+#st.write("-punto inicial    punto final      número de cables     área de cada cable")
+df_Caracteristicas_single = pd.DataFrame(
+    '',
+    index=range(1),
+    columns=['Punto','Area']
+)
+df_Caracteristicas_single['Punto']=[6]
+
+df_Caracteristicas_single['Area']=[0.000314]
+
+st.markdown('**Caracteristicas_ Armaduras_Single**')
+response = AgGrid(df_Caracteristicas_single, editable=True, fit_columns_on_grid_load=True)
+single = response['data'].to_dict('records')
+
+
+
+
+st.write("\n")
+#st.write("-punto inicial    punto final      número de cables     área de cada cable")
 df_Caracteristicas = pd.DataFrame(
     '',
     index=range(1),
@@ -199,9 +314,64 @@ df_Caracteristicas['Punto_Final']=[7]
 df_Caracteristicas['No_Armadura']=[10]
 df_Caracteristicas['Area']=[0.000314]
 
-st.markdown('**Caracteristicas**')
+
+st.markdown('**Caracteristicas_ Armaduras_Multi**')
 response = AgGrid(df_Caracteristicas, editable=True, fit_columns_on_grid_load=True)
-DB['punt_armadura']  = response['data'].to_dict('records')
+multi  = response['data'].to_dict('records')
+
+DB['arma']={'fyk':fyk, 'single':single, 'multi':multi}
+#************************
+
+
+
+fpk=st.number_input('fpk',1670000 )
+# Caracteristicas
+st.write("\n")
+#st.write("-punto inicial    punto final      número de cables     área de cada cable")
+df_Caracteristicas_single_pret = pd.DataFrame(
+    '',
+    index=range(1),
+    columns=['Punto1','Area1']
+)
+df_Caracteristicas_single_pret['Punto1']=[6]
+
+df_Caracteristicas_single_pret['Area1']=[0.000314]
+
+st.markdown('**Caracteristicas_ Cables_Single**')
+response = AgGrid(df_Caracteristicas_single_pret, editable=True, fit_columns_on_grid_load=True)
+single_pret = response['data'].to_dict('records')
+
+
+
+
+st.write("\n")
+#st.write("-punto inicial    punto final      número de cables     área de cada cable")
+df_Caracteristicas_pret = pd.DataFrame(
+    '',
+    index=range(1),
+    columns=['Punto_Inicial1', 'Punto_Final1', 'No_Armadura1', 'Area1']
+)
+df_Caracteristicas_pret['Punto_Inicial1']=[6]
+
+df_Caracteristicas_pret['Punto_Final1']=[7]
+df_Caracteristicas_pret['No_Armadura1']=[10]
+df_Caracteristicas_pret['Area1']=[0.000314]
+
+st.markdown('**Caracteristicas_Cables_Multi**')
+response = AgGrid(df_Caracteristicas_pret, editable=True, fit_columns_on_grid_load=True)
+multi_pret  = response['data'].to_dict('records')
+
+tension_inicial=st.number_input('tension_inicial', 1395000)
+
+DB['pret']={'fpk':fpk,'tension_inicial':tension_inicial, 'single':single_pret, 'multi':multi_pret}
+#************************
+
+
+#DB['pret']={'fpk':float,'tension_inicial':tension_inicial,'single':,'group':[{punto_inicial:int,punto_final:int,numero(de_cable):int,area:float},{...}]}
+
+
+
+
 
 # *************************
 #st.write("* Calculate of section")
@@ -219,11 +389,11 @@ st.write("Si se quiere obtener el diagrama de interacción vertical, únicamente
 st.write("Se puede definir las unidades en las que están dados los axiles y momentos. Para el caso de diagrama de interacción se ponen unidades de momento (tm, knm, kift, kiin). Para el caso de momento curvatura se ponen unidades de fuerza (t, kn, kip).")
 
 
-calc = st.selectbox("calc", options=["dibu", "inte"])
+calc = st.selectbox("calc", options=["dibu", "inte", "inte vert"])
+
+DB['calc']=calc
 
 st.write("-Axil     momento X    momento Y")
-
-
 
 
 df_LC = pd.DataFrame(
@@ -245,14 +415,12 @@ st.write("		momc	Obtención del diagrama momento curvatura")
 
 st.write("-Axil     beta")
 
-
-
 #%%
 
-#%%
 name_file = tempfile.gettempdir() + "/Carsec_AutoGenerated"
 CS.CARSEC_Writer(DB=DB, export_path=name_file)
-#st.write(CS.CARSEC_Writer(DB=DB, export_path="Output_files/Carsec_AutoGenerated.txt"))
+#st.write(CS.CARSEC_Writer(DB=DB, export_path="Out
+put_files/Carsec_AutoGenerated.txt"))
 
 
 st.subheader('Download data')
@@ -260,5 +428,4 @@ name_file_txt = name_file + '.txt'
 with open(name_file_txt, "rb") as fp:
 	btn = st.download_button(label="Download Carsec Input file",data=fp,file_name="Carsec_AutoGenerated.txt",mime="application/txt")
 	
-
 
