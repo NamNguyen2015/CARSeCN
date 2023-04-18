@@ -16,81 +16,144 @@ import matplotlib as mpl
 import copy
 
 
+import pandas as pd
+import json
+import os
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+import matplotlib as mpl
+import copy
+from collections import defaultdict,OrderedDict
+
+
 #%%# Create a None Database
 
 # =============================================================================
 
+# DB['titulo']=str
 
-# DB['secc']=str
 # DB['unid']=str
 # DB['norm']=str
-# DB['coef_horm']= float
-# DB['coef_arma']= float
-# DB['coef_pret']= float
+# DB['secc_horm']=str
+# DB['coef']={'coef_horm':float,'coef_arma':float,'coef_pret':float}
+# DB['phi']={'phi_compresion':float,'phi_traccion':float}
+# DB['puntos']=[{'punt':1, 'X':0,'Y':0},{'punt':2, 'X':2,'Y':0},{...}] # pandasDataFrame.to_dict('records')
+ 
 
-# DB['punt_contorno']=[0:{'punt':1, 'X':0,'Y':0},'punt':2, 'X':2,'Y':0},...] # pandasDataFrame.to_dict('records')
-# DB['horm']=float
-# DB['contorno_Poligonal']=[0:{'Punto_1':1,'Punto_2':2,'Punto_3':3,'Punto_4':4,...}]
-# DB['hc']=[0:{'Punto_Central':5,'Radio':0.3}]
-# DB['arma']=float
-# DB['punt_armadura']=[0:{'Punto_Inicial':6,'Punto_Final':7,'No_Armadura':10, 'Area':0.000314}]
-# DB['LC']=[0:{"Axil":-10, 'monento_X':5, 'monento_Y':2}]
+# DB['horm']={'fck':float,'puntos_contorno':[[points],[points],...]}
+
+# DB['hp']=[[points],[points],...]  NOTE: this is a list of lists.
+# DB['hc']=[{punto:int,radio:float},{...}]
+
+# DB['arma']={'fyk':float,'single':[{punto:int,area},{...}],'group':[{punto_inicial:int,punto_final:int,numero(de_armaduras):int,area:float},{...}]}
+# DB['pret']={'fpk':float,'tension_inicial':float,'single':[{punto:int,area (cada cable)},{...}],'multi':[{punto_inicial:int,punto_final:int,numero(de_cable):int,area:float},{...}]}
+
+# DB['calc']='str'   ( options : "dibu", "inte", "inte vert") 
+
+# DB['LC']=[{"Axil":-10, 'monento_X':5, 'monento_Y':2}]
 # 
 # =============================================================================
 
 #%% Functions:
-
 def CARSEC_Writer(DB,export_path='CARSEC'):
     with open(export_path+'.txt', 'w') as f:
-        f.write('CARSECN'+' \n')
+        f.write(DB['titulo']+' \n')
         f.write('* Tipo de seccion '+'\n')  
-        f.write('secc '+str(DB['secc'])+' \n')
-        f.write('* Unidades a emplear. Opciones: tm - knm - lbin'+'\n')  
+        f.write('secc '+str(DB['secc_horm'])+' \n')
+        f.write('* Unidades a emplear. Opciones: tm - knm - lbin'+'\n')
         f.write('unid '+str(DB['unid'])+' \n')
         f.write('* Normativa a emplear. Opciones: ehe  asashto '+'\n')  
         f.write('norm '+str(DB['norm'])+' \n')
         f.write('* Coeficientes de seguridad EHE o coeficientes phi AASHTO. No es obligatoria '+'\n')  
-        f.write('coef horm '+str(DB['coef_horm'])+' arma '+str(DB['coef_arma']) + ' pret '+str(DB['coef_pret'])+  ' \n')
-        f.write('* Puntos del contorno '+'\n')  
-        f.write('punt '+'\n')
-
-        for v in DB['punt_contorno']:
-            for k in v.keys():           
-                f.write(str(v[k])+' ')
-            f.write('\n')
-          
-            
-        f.write('* Definición del hormigón: fck, modulo de elasticidad. Este último es obligatorio '+'\n')     
-            
-        f.write('horm '+str(DB['horm'])+' \n')
+        f.write('coef horm '+str(DB['coef']['coef_horm'])+' arma '+str(DB['coef']['coef_arma']) + ' pret '+str(DB['coef']['coef_pret'])+  ' \n')
         
-        for v in DB['contorno_Poligonal']:
+        # DB['phi']={'phi_compresion':float,'phi_traccion':float}
+        f.write('phi ')
+        for v in DB['phi'].values(): 
+            f.write( str(v)+' ')
+        f.write('\n')
+
+        f.write('* Puntos '+'\n')  
+        f.write('punt '+'\n')
+        for v in DB['puntos']:
             for k in v.keys():           
                 f.write(str(v[k])+' ')
             f.write('\n')
-              
-        f.write('hc ') 
-        for v in DB['hc'] :
-            for k in v.keys():           
+
+        #f.write('* Definición del hormigón: fck, modulo de elasticidad. Este último es obligatorio '+'\n')     
+ #DB['horm']={'fck':float,'puntos_contorno':[[points],[points],...]}
+        f.write('* Definición del hormigón: fck, modulo de elasticidad. Este último es obligatorio '+'\n')     
+        
+
+            
+        for v in  DB['horm']['puntos_contorno']:
+            if v!=[]:
+                f.write('horm '+str(DB['horm']['fck'])+' \n')
+                for k in v:
+                    f.write(str(k)+' ')
+                f.write('\n')
+            
+                    
+        for v in DB['hp'] :
+            if v!=[]:
+                f.write('hp ')
+                for k in v:
+                    f.write(str(k)+' ')
+                f.write('\n')
+                
+                
+        
+
+        for v in DB['hc']:
+            f.write('hc')
+            for k in v.keys():
                 f.write(str(v[k])+' ')
-            f.write('\n')
+            f.write('\n')   
+        
+                
+
             
         f.write('* Definicion del acero pasivo: fyk '+'\n')   
         
-        f.write('arma '+str(DB['arma'])+' \n')
+        f.write('arma '+str(DB['arma']['fyk'])+' \n')
     
-        for v in DB['punt_armadura']:
+        for v in DB['arma']['single']:
+            for k in v.keys():           
+                f.write(str(v[k])+' ')
+            f.write('\n')
+        
+        for v in DB['arma']['multi']:
             for k in v.keys():           
                 f.write(str(v[k])+' ')
             f.write('\n')
             
+        f.write('pret '+str(DB['pret']['fpk'])+' '+str(DB['pret']['tension_inicial'])+' \n')
         
-        f.write('calc inte'+' \n')
+        for v in DB['pret']['single']:
+            for k in v.keys():           
+                f.write(str(v[k])+' ')
+            f.write('\n')
+        
+        for v in DB['pret']['multi']:
+            for k in v.keys():           
+                f.write(str(v[k])+' ')
+            f.write('\n')
+        
+        
+        if DB['norm'] != 'aashto' and  DB['calc']== 'inte vert':
+            print(' vert only available for aashto!, the calc parameter has changed to inte')
+            DB['calc']='inte'
+        f.write('calc '+str(DB['calc'])+' \n')        
         for v in DB['LC'] :
             for k in v.keys():
                 f.write(str(v[k])+' ' )
             f.write('\n')
-        f.write('fin')
+        f.write('fin')    
+    
+    
+    
+
 #%%                         
     
 def save_to_json(DB,name='my_DB'):
@@ -122,50 +185,82 @@ def table_to_dict(dict_tables):
 	ID_list = (dict_tables['Properties']['ID'].unique()).tolist()
 	multi_DB={}
 	for i in ID_list:
-		multi_DB[i]={}
+		multi_DB[i]=defaultdict(lambda: defaultdict(dict))
+		multi_DB[i]['titulo']=i
 		for k in dict_tables:
-			multi_DB[i][k] = dict_tables[k][dict_tables[k]['ID'] == i]
+			_df = dict_tables[k][dict_tables[k]['ID'] == i]
 			if k=='Properties':
-				multi_DB[i]['secc']=multi_DB[i][k]['secc'].tolist()[0]
-				multi_DB[i]['unid']=multi_DB[i][k]['unid'].tolist()[0]
-				multi_DB[i]['norm']=multi_DB[i][k]['norm'].tolist()[0]
-				multi_DB[i]['coef_horm']=multi_DB[i][k]['coef_horm'].tolist()[0]
-				multi_DB[i]['coef_arma']=multi_DB[i][k]['coef_arma'].tolist()[0]
-				multi_DB[i]['coef_pret']=multi_DB[i][k]['coef_pret'].tolist()[0]
-				multi_DB[i]['horm']=multi_DB[i][k]['horm'].tolist()[0]
-				multi_DB[i]['arma']=multi_DB[i][k]['arma'].tolist()[0]
+				multi_DB[i]['secc']=_df['secc'].tolist()[0]
+				multi_DB[i]['unid']=_df['unid'].tolist()[0]
+				multi_DB[i]['norm']=_df['norm'].tolist()[0]
+				# coeficients 
+				multi_DB[i]['coef']['coef_horm']=_df['coef_horm'].tolist()[0]
+				multi_DB[i]['coef']['coef_arma']=_df['coef_arma'].tolist()[0]
+				multi_DB[i]['coef']['coef_pret']=_df['coef_pret'].tolist()[0]
+				# phi
+				multi_DB[i]['phi']['phi_compression']=_df['phi_compression'].tolist()[0]
+				multi_DB[i]['phi']['phi_traction']=_df['phi_traction'].tolist()[0]
+				#parameters for concrete
+				multi_DB[i]['horm']['fck']=_df['horm_fck'].tolist()[0]
+				# parameters for armadura
+				multi_DB[i]['arma']['fyk']=_df['arma_fyk'].tolist()[0]
+				#parameters for prestressing cables
+				multi_DB[i]['pret']['fpk']=_df['pret_fpk'].tolist()[0]
+				multi_DB[i]['pret']['tension_inicial']=_df['tension_inicial'].tolist()[0]
+				#parameters for calculation type
+				multi_DB[i]['calc']=_df['calc'].tolist()[0]
 				
-			elif k=="Geometries":
-				multi_DB[i]['punt_contorno']=multi_DB[i][k].iloc[:,1:10].dropna(axis=1).to_dict('record')
+			elif k=='puntos':
+				multi_DB[i]['puntos']=_df.iloc[:,1:100].to_dict('records')
+
+			elif k=='puntos_contorno':
+				_list=[]
+				for j in range(_df.shape[0]):
+					_list.append(_df.iloc[j,1:100].dropna().tolist())
+				multi_DB[i]['horm']['puntos_contorno']=_list
+			
+			elif k=="hueco_circular":
+				multi_DB[i]['hc']=_df.iloc[:,1:100].to_dict('records')
+			
+			elif k=="hueco_poligonal":
+				_list=[]
+				for j in range(_df.shape[0]):
+					_list.append(_df.iloc[j,1:100].dropna().tolist())
+				multi_DB[i]['hp']=_list
 				
-			elif k=="hp":
-				multi_DB[i]['contorno_Poligonal']=multi_DB[i][k].iloc[:,1:11].dropna(axis=1).to_dict('records')
+			elif k=="armadura_single":
+				multi_DB[i]['arma']['single']=_df.iloc[:,1:100].to_dict('records')
+			
+			elif k=="armadura_group":
+				multi_DB[i]['arma']['multi']=_df.iloc[:,1:100].to_dict('records')
 				
-			elif k=="hc":
-				multi_DB[i]['hc']=multi_DB[i][k].iloc[:,1:3].to_dict('record')
-				
-			elif k=="Caracteristicas":
-				multi_DB[i]['punt_armadura']=multi_DB[i][k].iloc[:,1:10].to_dict('record')
+			elif k=="cable_single":
+				multi_DB[i]['arma']['single']=_df.iloc[:,1:100].to_dict('records')
+			
+			elif k=="cable_group":
+				multi_DB[i]['pret']['multi']=_df.iloc[:,1:100].to_dict('records')
 				
 			elif k=="LC":
-				multi_DB[i]['LC']=multi_DB[i][k].iloc[:,1:5].to_dict('record')
+				multi_DB[i]['LC']=_df.iloc[:,1:100].dropna().to_dict('records')
 	
 	return multi_DB
 
 
 
-def multi_CARSEC_writer(multi_DB,export_path='CS_Multi_'):
+#def multi_CARSEC_writer(multi_DB,export_path='CS_Multi_'):
+def multi_CARSEC_writer(multi_DB,export_path=''):
 	for i_d in multi_DB:
 		CARSEC_Writer(multi_DB[i_d], export_path=export_path+str(i_d))
 
 
 
 
-def excel_to_CARSEC(load_path,export_path='CS_Multi_'):
+#def excel_to_CARSEC(load_path,export_path='CS_Multi_'):
+def excel_to_CARSEC(load_path,export_path=''):
 	dict_tables = pd.read_excel(load_path,sheet_name=None)
 	multi_DB=table_to_dict(dict_tables)
 	multi_CARSEC_writer(multi_DB=multi_DB,export_path=export_path)
-
+	return dict_tables,multi_DB
 
 
 
